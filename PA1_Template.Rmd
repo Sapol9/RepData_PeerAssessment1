@@ -1,0 +1,154 @@
+---
+title: "Reproducible Research: Peer Assessment 1"
+author: "Steve Sapol"
+output: 
+  html_document:
+    keep_md: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Part 1:  Loading and preprocessing the data
+
+```{r setup, echo=TRUE}
+library(ggplot2)
+library(readr)
+library(plyr)
+```
+
+1. Load the required packages:
+```{r Packages, echo=TRUE}
+library(ggplot2)
+library(readr)
+library(plyr)
+```
+
+2. Read in the data set:
+```{r Load Dataset, echo=TRUE}
+activity <- read_csv("~/activity.csv")
+```
+
+##Part 2: What is the mean total number of steps taken per day?
+
+1.  Create a histogram of the total number of steps per day:
+```{r Histogram, echo=TRUE}
+#Aggregate by day
+bydate <- aggregate(activity["steps"], by=activity["date"], sum)
+
+#Plot the histogram
+hist(bydate$steps, 
+     main="Histogram for Number of Steps", 
+     xlab="# of Steps",
+     ylab="# of Days",
+     col="light blue",
+     las=1, 
+     breaks=5)
+```
+
+2.  Calculate and report the mean total number of steps taken per day:
+```{r Mean Steps, echo=TRUE}
+#Calculate Mean (Removed NA Values)
+mean(bydate$steps, na.rm = TRUE)
+```
+
+3.  Calculate and report the median number of steps taken per day:
+```{r Median Steps, echo=TRUE}
+#Calculate Mean (Removed NA Values)
+median(bydate$steps, na.rm = TRUE)
+```
+
+##Part 3:  What is the average daily activity pattern?
+
+1. Create a time series plot of the 5-minute interval and the average number of steps taken, averaged across all days.
+```{r 5 min interval, echo=TRUE}
+#Interval Aggregate
+byinterval <- aggregate(activity["steps"], by=activity["interval"], mean, na.rm = TRUE)
+
+#Plot Time Series
+ggplot(byinterval, aes(interval, steps)) + geom_line() +
+  xlab("Interval") + ylab("Steps")
+```
+
+2. Identify the 5-minute interval that contains the maximum number of steps.
+```{r 5 minute interval max, echo=TRUE}
+
+#Determine interval with max steps
+maxsteps <- byinterval[which.max(byinterval$steps),]
+
+#The max number of steps is at
+maxsteps$interval
+
+```
+
+##Part 4:  Imputing Missing Values
+
+1.  Calculate the total number of missing values in the data set.  
+```{r Total NAs, echo=TRUE}
+#Total NAs
+sum(is.na(activity$steps))
+```
+
+2.  Devise a strategy for filling in all of the missing values and create a new dataset.
+```{r Fill missing values, echo = TRUE}
+#Create new actitity table replacing NA with average by interval
+activitynew <- activity
+
+activitynew$steps <- with(activitynew, ave(steps, interval,
+                          FUN = function(x) replace(x, is.na(x), mean(x, na.rm = TRUE))))
+```
+
+3.  Make a histogram of the total number of steps take each day.
+```{r new histogram, echo = TRUE}
+#aggregate new by day
+bydatenew <- aggregate(activitynew["steps"], by=activitynew["date"], sum)
+
+#Histogram of number of steps by day
+hist(bydatenew$steps, 
+     main="Histogram for Number of Steps", 
+     xlab="# of Steps",
+     ylab="# of Days",
+     col="light blue",
+     las=1, 
+     breaks=5)
+```
+
+4.  Calculate and report the mean total number of steps taken per day:
+```{r new mean, echo = TRUE}
+#Calculate Mean 
+mean(bydatenew$steps)
+```
+
+5.  Calculate and report the median number of steps taken per day:
+```{r new median, echo = TRUE}
+#Calculate Mean 
+median(bydatenew$steps)
+```
+
+##Part 5: Are there differences in activity patterns between weekdays and weekends.
+
+1.  Create a new factor, "Weekday" and "Weekend"
+```{r weekends, echo = TRUE}
+activity$day <- weekdays(activity$date)
+activity$weekend <- revalue(activity$day, 
+                            c("Monday" = "Weekday", 
+                              "Tuesday" = "Weekday",
+                              "Wednesday" = "Weekday",
+                              "Thursday" = "Weekday", 
+                              "Friday" = "Weekday", 
+                              "Saturday" = "Weekend", 
+                              "Sunday" = "Weekend"))
+
+#Aggregate by day and By weekend
+bydayinterval <- aggregate(steps ~ weekend+interval, data = activity, mean, na.rm = TRUE)
+```
+
+2.  Make a panel plot comparing the two.
+```{r panel plot, echo = TRUE}
+#Panel Plot - Weekend
+p <- ggplot(bydayinterval, aes(interval, steps)) + geom_line() +
+  xlab("Interval") + ylab("Steps")
+
+p + facet_grid(weekend~.)
+```
